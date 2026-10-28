@@ -3,7 +3,7 @@ import { Game } from './game.js';
 const canvas = document.getElementById('game-canvas');
 
 try {
-  window.waykeepers = new Game(canvas);
+  window.waykeepers = await Game.create(canvas);
 } catch (error) {
   console.error(error);
   const message = document.createElement('div');

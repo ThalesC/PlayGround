@@ -701,7 +701,9 @@ body { cursor: default; }
   #player-hud { width: 52vw; }
   #controls-hint { display: none; }
   .journal-grid, .settings-grid { grid-template-columns: 1fr; }
-  .title-mark { font-size: clamp(2.8rem, 13vw, 5rem); }
+  .title-mark { font-size: clamp(2.2rem, 12vw, 4.2rem); letter-spacing: 0.04em; }
+  .title-content { width: min(30rem, 92vw); }
+  .title-glow { width: 24rem; height: 24rem; left: 1rem; }
 }
 
 

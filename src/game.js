@@ -13,6 +13,7 @@ import { Player } from './player.js';
 import { Enemy, Boss } from './enemy.js';
 import { Input } from './input.js';
 import { AudioManager } from './audio.js';
+import { loadAssets } from './assets.js';
 import { SaveManager, createDefaultProgress, validateProgress } from './save.js';
 import { UI } from './ui.js';
 import { clamp, damp, lerp } from './util.js';
@@ -57,10 +58,10 @@ class CameraRig {
     const game = this.game;
     const camera = game.camera;
     if (game.mode === 'title') {
-      this.titleAngle += dt * 0.035;
-      const a = this.titleAngle + 0.3;
-      camera.position.set(Math.sin(a) * 19 + 4, 8.2, 15 + Math.cos(a) * 19);
-      camera.lookAt(0, 1.7, 14.5);
+      this.titleAngle += dt * 0.02;
+      const a = this.titleAngle + 0.15;
+      camera.position.set(18 + Math.sin(a) * 4, 9.5, 28 + Math.cos(a) * 5);
+      camera.lookAt(0, 1.2, 12.5);
       return;
     }
     if (game.mode === 'ending' && this.cinematic) {
@@ -128,6 +129,15 @@ class CameraRig {
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
+  }
+
+  static async create(canvas) {
+    const game = new Game(canvas);
+    await game.init();
+    return game;
+  }
+
+  async init() {
     this.mode = 'title';
     this.time = 0;
     this.ambientTime = 0;
@@ -150,7 +160,7 @@ export class Game {
     this.transitionTimer = null;
 
     this.renderer = new THREE.WebGLRenderer({
-      canvas,
+      canvas: this.canvas,
       antialias: true,
       powerPreference: 'high-performance',
       alpha: false,
@@ -172,7 +182,7 @@ export class Game {
     );
 
     this.audio = new AudioManager();
-    this.input = new Input(canvas);
+    this.input = new Input(this.canvas);
     this.saveManager = new SaveManager((status, text) => {
       this.saveStatus = { status, text };
       this.ui?.showSaveStatus(status, text);
@@ -187,7 +197,8 @@ export class Game {
     } else {
       this.loadError = loaded.reason;
     }
-    this.world = new World(this.scene, this.renderer);
+    this.assets = await loadAssets();
+    this.world = new World(this.scene, this.renderer, this.assets);
     this.player = new Player(this);
     this.boss = new Boss(this);
     this.enemies = [];

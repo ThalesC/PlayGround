@@ -25,9 +25,15 @@ const PALETTE = {
 };
 
 function groundHeight(x, z) {
-  if (z > -56) return 0;
-  if (z > -64) return smoothstep((-z - 56) / 8) * 1.5;
-  return 1.5;
+  if (z > -56) {
+    const campDistance = Math.hypot(x, z - 14.5);
+    let y = Math.max(0, 0.52 - campDistance * 0.032);
+    y += Math.sin(x * 0.23) * 0.11 + Math.cos(z * 0.19) * 0.08;
+    if (z < 2) y -= Math.max(0, (2 - z) * 0.018);
+    return clamp(y, -0.35, 0.55);
+  }
+  if (z > -64) return smoothstep((-z - 56) / 8) * 1.5 + Math.sin(x * 0.21) * 0.08;
+  return 1.5 + Math.sin(x * 0.17) * 0.12;
 }
 
 function distToSegment(px, pz, ax, az, bx, bz) {
@@ -51,7 +57,8 @@ function routeDistance(x, z) {
   d = Math.min(d, distToSegment(x, z, 20, -32, 27, -27));
   const arenaD = Math.hypot(x - 0, z + 117);
   if (arenaD < 15) d = Math.min(d, Math.max(0, arenaD - 12.2));
-  return d;
+  const noisy = d + Math.sin(x * 0.37 + z * 0.71) * 0.75 + Math.cos(x * 0.19 - z * 0.33) * 0.45;
+  return Math.max(0, noisy);
 }
 
 const matCache = new Map();
@@ -141,8 +148,9 @@ function flameTexture() {
 }
 
 export class World {
-  constructor(scene, renderer) {
+  constructor(scene, renderer, assets = {}) {
     this.scene = scene;
+    this.assets = assets;
     this.renderer = renderer;
     this.colliders = [];
     this.cameraOccluders = [];
@@ -157,6 +165,7 @@ export class World {
     this._buildGround();
     this._buildForest();
     this._buildCamp();
+    this._buildImportedCampDetails();
     this._buildMossroad();
     this._buildCartYard();
     this._buildShortcut();
@@ -606,6 +615,126 @@ export class World {
     addBox(sign, 1.7, 0.65, 0.1, PALETTE.timberLight, 0, 1.55, 0);
     this.scene.add(sign);
     this.campSign = sign;
+  }
+
+  _cloneAsset(pack, name) {
+    const asset = this.assets?.[pack]?.[name];
+    if (!asset) return null;
+    const clone = asset.clone(true);
+    clone.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+      }
+    });
+    return clone;
+  }
+
+  _addAsset(pack, name, x, y, z, ry = 0, scale = 1, occlude = true) {
+    const clone = this._cloneAsset(pack, name);
+    if (!clone) return null;
+    clone.position.set(x, y, z);
+    clone.rotation.y = ry;
+    clone.scale.setScalar(scale);
+    this.scene.add(clone);
+    if (occlude) {
+      clone.traverse((obj) => {
+        if (obj.isMesh) this.cameraOccluders.push(obj);
+      });
+    }
+    return clone;
+  }
+
+  _buildImportedCampDetails() {
+    // Trees around the gathering space and the Mossroad approach.
+    this._addAsset('nature', 'BirchTree_2', -13.5, 0, 24.5, 0.35, 1.0);
+    this._addAsset('nature', 'BirchTree_2', 12.8, 0, 25.2, -0.2, 0.9);
+    this._addAsset('nature', 'MapleTree_3', -15.2, 0, 12.0, 0.8, 0.95);
+    this._addAsset('nature', 'MapleTree_3', 14.2, 0, 13.5, -0.55, 1.0);
+    this._addAsset('nature', 'DeadTree_2', 16.5, 0, -3.5, 0.25, 1.05);
+    this._addAsset('nature', 'DeadTree_2', -17.0, 0, -1.5, -0.35, 0.9);
+
+    // Vegetation clusters around foundations and banks.
+    this._addAsset('nature', 'Bush_Large', -10.5, 0, 12.5, 0.4, 1.0);
+    this._addAsset('nature', 'Bush_Large', 9.5, 0, 19.5, -0.3, 0.95);
+    this._addAsset('nature', 'Bush_Small', -3.0, 0, 13.0, 0.6, 1.0);
+    this._addAsset('nature', 'Bush_Small', 4.5, 0, 13.5, -0.8, 0.9);
+    this._addAsset('nature', 'Bush_Flowers', -6.8, 0, 16.5, 0.2, 0.9);
+    this._addAsset('nature', 'Bush_Flowers', 6.2, 0, 17.2, -0.4, 0.85);
+    this._addAsset('nature', 'Flower_1_Clump', -4.0, 0, 15.5, 0.5, 1.0);
+    this._addAsset('nature', 'Flower_2_Clump', 3.5, 0, 15.0, -0.2, 0.95);
+    this._addAsset('nature', 'Grass_Large', -1.0, 0, 11.5, 0.1, 1.0, false);
+    this._addAsset('nature', 'Grass_Large', 2.5, 0, 12.5, -0.6, 0.9, false);
+
+    // Damaged workshop composition.
+    this.workshopDamagedGroup = new THREE.Group();
+    this.workshopDamagedGroup.name = 'workshop-damaged';
+    this.scene.add(this.workshopDamagedGroup);
+    const damaged = (name, x, y, z, ry = 0, scale = 1) => {
+      const clone = this._cloneAsset('ruins', name);
+      if (!clone) return null;
+      clone.position.set(x, y, z);
+      clone.rotation.y = ry;
+      clone.scale.setScalar(scale);
+      this.workshopDamagedGroup.add(clone);
+      clone.traverse((obj) => {
+        if (obj.isMesh) this.cameraOccluders.push(obj);
+      });
+      return clone;
+    };
+    damaged('Wall_Broken', -9.8, 0, 8.6, 0.15, 1.0);
+    damaged('Wall_Half', -7.4, 0, 11.2, -0.25, 1.0);
+    damaged('Wall_Overgrown', -10.0, 0, 10.8, 1.35, 0.95);
+    damaged('Support_Left', -9.2, 0, 9.8, 0.2, 1.0);
+    damaged('Support_Right', -7.8, 0, 9.2, -0.1, 1.0);
+    damaged('Arch_Round', -8.6, 0, 9.5, 0.0, 0.85);
+    damaged('Column_Round', -9.6, 0, 9.0, 0.0, 0.9);
+    damaged('Column_Round_Short', -7.6, 0, 10.2, 0.0, 0.9);
+    damaged('Barrel', -6.8, 0, 8.9, 0.4, 0.9);
+    damaged('Crate', -7.1, 0, 10.8, -0.3, 0.85);
+    damaged('Cart', -10.8, 0, 10.0, 0.7, 0.9);
+    damaged('Pot1', -6.4, 0, 9.8, 0.2, 0.9);
+    damaged('Pot1_Broken', -8.0, 0, 8.4, -0.5, 0.85);
+    damaged('Pot2', -9.0, 0, 11.4, 0.3, 0.85);
+    damaged('Torch', -7.2, 0, 9.0, 0.0, 0.85);
+    damaged('Stairs', -8.6, 0, 7.8, 0.0, 0.75);
+    damaged('Floor_Standard', -8.6, 0, 9.5, 0.0, 0.9);
+
+    // Restored workshop additions.
+    this.workshopRestoredGroup = new THREE.Group();
+    this.workshopRestoredGroup.name = 'workshop-restored';
+    this.workshopRestoredGroup.visible = false;
+    this.scene.add(this.workshopRestoredGroup);
+    const restored = (name, x, y, z, ry = 0, scale = 1) => {
+      const clone = this._cloneAsset('ruins', name);
+      if (!clone) return null;
+      clone.position.set(x, y, z);
+      clone.rotation.y = ry;
+      clone.scale.setScalar(scale);
+      this.workshopRestoredGroup.add(clone);
+      clone.traverse((obj) => {
+        if (obj.isMesh) this.cameraOccluders.push(obj);
+      });
+      return clone;
+    };
+    restored('Wall', -9.8, 0, 8.6, 0.15, 1.0);
+    restored('Wall_ArchRound', -8.6, 0, 9.5, 0.0, 0.95);
+    restored('Wall', -7.4, 0, 11.2, -0.25, 1.0);
+    restored('Support_Center', -8.6, 0, 9.5, 0.0, 1.0);
+    restored('Support_Left', -9.2, 0, 9.8, 0.2, 1.0);
+    restored('Support_Right', -7.8, 0, 9.2, -0.1, 1.0);
+    restored('Column_Round', -9.6, 0, 9.0, 0.0, 0.9);
+    restored('Column_Round_Short', -7.6, 0, 10.2, 0.0, 0.9);
+    restored('Barrel', -6.8, 0, 8.9, 0.4, 0.9);
+    restored('Crate', -7.1, 0, 10.8, -0.3, 0.85);
+    restored('Cart', -10.8, 0, 10.0, 0.7, 0.9);
+    restored('Pot1', -6.4, 0, 9.8, 0.2, 0.9);
+    restored('Pot2', -9.0, 0, 11.4, 0.3, 0.85);
+    restored('Torch', -7.2, 0, 9.0, 0.0, 0.85);
+    restored('Floor_Standard', -8.6, 0, 9.5, 0.0, 0.95);
+
+    // Extra rocks around banks and foundations.
+    this._addAsset('nature', 'DeadTree_2', 18.0, 0, -8.0, 0.5, 0.75);
   }
 
   _buildMossroad() {
@@ -1081,6 +1210,8 @@ export class World {
     this.workshopLight.intensity = built ? 1.7 : 0;
     this._setPointLight(this.workshopLight, built);
     this.workshopBench.material = makeMat(built ? 0x9a784d : PALETTE.timberLight);
+    if (this.workshopDamagedGroup) this.workshopDamagedGroup.visible = !built;
+    if (this.workshopRestoredGroup) this.workshopRestoredGroup.visible = built;
   }
 
   setBrazierActive(active) {
