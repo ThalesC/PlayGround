@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#07080a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2306070a'/%3E%3Cpath d='M32 6 39 24 58 24 43 36 49 55 32 43 15 55 21 36 6 24 25 24Z' fill='none' stroke='%23c9a86a' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='8' fill='none' stroke='%23e0783d' stroke-width='2'/%3E%3C/svg%3E">
+  <title>Ashen Crown — The Hollow Court</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage">
+    <canvas id="game" aria-label="Ashen Crown, an isometric action role-playing game"></canvas>
+    <canvas id="world3d" aria-hidden="true"></canvas>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <div class="grade" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <section id="hud" class="hud is-hidden" aria-label="Player status">
+      <div class="hud-top">
+        <div class="vitae panel">
+          <div class="sigil" aria-hidden="true">
+            <svg viewBox="0 0 64 64"><path d="M32 4 39 23 59 23 43 35 49 55 32 43 15 55 21 35 5 23 25 23Z"/><circle cx="32" cy="32" r="9"/></svg>
+          </div>
+          <div class="vitals">
+            <div class="name-row">
+              <span class="name">THE ASH WARDEN</span>
+              <span class="rank">OATHBOUND</span>
+            </div>
+            <div class="bar hp">
+              <div class="fill" id="hp-fill"></div>
+              <div class="bar-sheen"></div>
+              <span class="bar-text" id="hp-text">100 / 100</span>
+            </div>
+            <div class="sub-bars">
+              <div class="bar stamina"><div class="fill" id="stam-fill"></div><span>STAMINA</span></div>
+              <div class="bar rage"><div class="fill" id="rage-fill"></div><span>WRATH</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="realm panel">
+          <span class="realm-kicker">COURT OF CINDERS</span>
+          <strong id="wave-label">WAVE I</strong>
+          <span class="realm-sub" id="wave-sub">THE THRONE ROAD</span>
+        </div>
+
+        <div class="souls panel">
+          <span class="soul-icon" aria-hidden="true"></span>
+          <div>
+            <strong id="soul-count">0</strong>
+            <small>SOULS CLAIMED</small>
+          </div>
+        </div>
+      </div>
+
+      <div id="boss" class="bossbar is-hidden" aria-label="Boss health">
+        <div class="boss-meta">
+          <span id="boss-name">THE HOLLOW KING</span>
+          <span id="boss-phase">FIRST BREATH</span>
+        </div>
+        <div class="boss-track">
+          <div id="boss-fill"></div>
+          <div class="boss-glint"></div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="flask panel" id="flask" title="Drink ember flask">
+          <span class="flask-icon" aria-hidden="true"></span>
+          <strong id="flask-count">3</strong>
+          <span class="keycap">E</span>
+        </div>
+
+        <div class="hints panel" aria-label="Controls">
+          <div><span class="keycap">LMB</span> STRIKE</div>
+          <div><span class="keycap">RMB</span> HEAVY</div>
+          <div><span class="keycap">SPACE</span> DODGE</div>
+          <div><span class="keycap">SHIFT</span> GUARD</div>
+          <div><span class="keycap">Q</span> WRATH</div>
+        </div>
+
+        <div class="combo is-hidden" id="combo">
+          <span id="combo-num">2</span>
+          <small>HIT CHAIN</small>
+        </div>
+      </div>
+
+      <div id="feed" class="center-feed" aria-live="polite"></div>
+      <div id="warning" class="boss-warning is-hidden">THE KING STIRS</div>
+      <div id="hurt-flash" class="hurt-flash" aria-hidden="true"></div>
+    </section>
+
+    <section id="menu" class="screen menu-screen">
+      <div class="menu-veil"></div>
+      <div class="menu-content">
+        <div class="eyebrow"><span></span>AN ISOMETRIC ACTION RPG<span></span></div>
+        <h1>ASHEN<br><em>CROWN</em></h1>
+        <p class="tagline">The Hollow Court has no king.<br>Only a debt.</p>
+        <button id="start-btn" class="btn primary" type="button">
+          <span>ENTER THE COURT</span>
+          <i aria-hidden="true"></i>
+        </button>
+        <div class="controls-grid">
+          <div><span class="keycap">WASD</span><b>MOVE</b></div>
+          <div><span class="keycap">LMB</span><b>STRIKE</b></div>
+          <div><span class="keycap">RMB</span><b>HEAVY / HOLD</b></div>
+          <div><span class="keycap">SPACE</span><b>DODGE</b></div>
+          <div><span class="keycap">SHIFT</span><b>GUARD / PARRY</b></div>
+          <div><span class="keycap">Q</span><b>WRATH</b></div>
+        </div>
+        <p class="fine">Heavy impacts ahead. Headphones recommended.</p>
+      </div>
+      <div class="menu-mark" aria-hidden="true">
+        <span>I</span>
+        <p>THE THRONE ROAD</p>
+      </div>
+    </section>
+
+    <section id="upgrade" class="screen upgrade-screen is-hidden" aria-label="Choose an upgrade">
+      <div class="upgrade-head">
+        <span class="eyebrow">THE COURT REWARDS SURVIVAL</span>
+        <h2>CHOOSE YOUR BURDEN</h2>
+        <p>Every gift takes its pound of flesh.</p>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="end-screen" class="screen end-screen is-hidden" aria-label="Run complete">
+      <div class="end-card panel">
+        <span class="eyebrow" id="end-kicker">YOU DIED</span>
+        <h2 id="end-title">THE COURT KEEPS YOU</h2>
+        <p id="end-copy">The cinders remember your name.</p>
+        <div class="end-stats">
+          <div><small>WAVES</small><strong id="end-wave">0</strong></div>
+          <div><small>SOULS</small><strong id="end-souls">0</strong></div>
+          <div><small>BEST CHAIN</small><strong id="end-combo">0</strong></div>
+        </div>
+        <button id="retry-btn" class="btn primary" type="button"><span>RISE AGAIN</span><i aria-hidden="true"></i></button>
+      </div>
+    </section>
+
+    <section id="pause" class="screen pause-screen is-hidden" aria-label="Paused">
+      <div class="pause-card">
+        <span class="eyebrow">THE COURT WAITS</span>
+        <h2>PAUSED</h2>
+        <p>Press <span class="keycap">ESC</span> to return to the fight.</p>
+      </div>
+    </section>
+
+    <div id="touch-ui" class="touch-ui is-hidden" aria-hidden="true">
+      <div id="stick" class="stick"><div class="stick-ring"></div><div id="stick-knob" class="stick-knob"></div></div>
+      <div class="touch-buttons">
+        <button type="button" data-act="ult" class="touch-btn ult">WRATH</button>
+        <button type="button" data-act="heavy" class="touch-btn heavy">HEAVY</button>
+        <button type="button" data-act="light" class="touch-btn light">STRIKE</button>
+        <button type="button" data-act="dodge" class="touch-btn dodge">DODGE</button>
+        <button type="button" data-act="flask" class="touch-btn flask">FLASK</button>
+      </div>
+    </div>
+
+    <button id="mute-btn" class="mute-btn" type="button" aria-label="Toggle sound" title="Toggle sound">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5c1.2 1 1.2 6 0 7M18.5 6c2.6 2.3 2.6 9.7 0 12"/></svg>
+    </button>
+  </main>
+
+  <script src="js/core.js"></script>
+  <script src="js/arena.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/player-draw.js"></script>
+  <script src="js/enemy-draw.js"></script>
+  <script src="js/vendor/three.min.js"></script>
+  <script src="js/three-scene.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
