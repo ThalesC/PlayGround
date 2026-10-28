@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1b2420" />
+    <title>Waykeepers — Chapter I: Light the Road</title>
+    <script type="module" crossorigin src="/assets/index-gWudz8-e.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CKzxQxnB.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Waykeepers game view"></canvas>
+      <div id="vignette"></div>
+      <div id="damage-flash"></div>
+      <div id="hud" class="hidden" aria-live="polite">
+        <div id="objective-panel">
+          <div class="eyebrow">Chapter I · Light the Road</div>
+          <div id="objective-text"></div>
+        </div>
+        <div id="save-indicator" class="save-idle">Autosave ready</div>
+        <div id="enemy-hud"></div>
+        <div id="boss-hud" class="hidden">
+          <div class="boss-name-row"><span>Gate Warden</span><span id="boss-phase">I</span></div>
+          <div class="bar boss-bar"><div id="boss-fill"></div></div>
+        </div>
+        <div id="player-hud">
+          <div class="vitals-head"><span>Waykeeper</span><span id="salvage-pill">Salvage 0</span></div>
+          <div class="bar health-bar"><div id="health-fill"></div><span id="health-text">100</span></div>
+          <div class="bar stamina-bar"><div id="stamina-fill"></div><span id="stamina-text">100</span></div>
+          <div id="heal-row">
+            <span class="heal-label">Healing</span>
+            <span class="heal-pip" data-index="0"></span>
+            <span class="heal-pip" data-index="1"></span>
+            <span id="heal-hint">R</span>
+          </div>
+        </div>
+        <div id="interaction-prompt" class="hidden"><span class="key">E</span><span id="interaction-text"></span></div>
+        <div id="toast"></div>
+        <div id="chapter-banner" class="hidden"></div>
+        <div id="lock-reticle" class="hidden"><span></span></div>
+        <div id="controls-hint">WASD move · Shift sprint · LMB light · RMB heavy · Space dodge · Q lock · R heal · E interact · Esc pause</div>
+      </div>
+      <div id="capture-hint" class="hidden">Click to capture the mouse</div>
+
+      <div id="title-screen" class="screen">
+        <div class="title-glow"></div>
+        <div class="title-content">
+          <div class="title-mark">WAYKEEPERS</div>
+          <div class="title-rule"></div>
+          <div class="title-chapter">Chapter I</div>
+          <div class="title-subtitle">Light the Road</div>
+          <p class="title-blurb">A quiet road. A failing beacon. One traveler with a spear.</p>
+          <div class="menu-buttons">
+            <button id="btn-continue" class="menu-button">Continue</button>
+            <button id="btn-new-game" class="menu-button">New Game</button>
+            <button id="btn-title-settings" class="menu-button">Settings</button>
+          </div>
+          <div class="title-footer">Solo expedition · Saves belong to this browser and device</div>
+        </div>
+      </div>
+
+      <div id="pause-menu" class="screen modal-screen hidden">
+        <div class="panel menu-panel">
+          <div class="panel-kicker">The road waits</div>
+          <h2>Paused</h2>
+          <div class="menu-buttons">
+            <button id="btn-resume" class="menu-button">Resume</button>
+            <button id="btn-journal" class="menu-button">Journal</button>
+            <button id="btn-pause-settings" class="menu-button">Settings</button>
+            <button id="btn-title-return" class="menu-button subtle">Return to title</button>
+          </div>
+          <div class="panel-note">Simulation paused. The mouse is released.</div>
+        </div>
+      </div>
+
+      <div id="journal-panel" class="screen modal-screen hidden">
+        <div class="panel wide-panel">
+          <div class="panel-head"><div><div class="panel-kicker">Waykeeper's notes</div><h2>Journal</h2></div><button class="close-button" data-close="journal">Close</button></div>
+          <div class="journal-grid">
+            <section>
+              <h3>Current objective</h3>
+              <p id="journal-objective"></p>
+              <h3>Resources</h3>
+              <p id="journal-resources"></p>
+            </section>
+            <section>
+              <h3>Rest points</h3>
+              <ul id="journal-rest"></ul>
+              <h3>Shortcut</h3>
+              <p id="journal-shortcut"></p>
+            </section>
+            <section>
+              <h3>Discoveries</h3>
+              <ul id="journal-discoveries"></ul>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings-panel" class="screen modal-screen hidden">
+        <div class="panel wide-panel settings-panel">
+          <div class="panel-head"><div><div class="panel-kicker">Comfort and clarity</div><h2>Settings</h2></div><button class="close-button" data-close="settings">Close</button></div>
+          <div class="settings-grid">
+            <label class="setting-row"><span>Mouse sensitivity</span><input id="set-sensitivity" type="range" min="0.4" max="2.2" step="0.05" /><output id="out-sensitivity"></output></label>
+            <label class="setting-row"><span>Invert vertical look</span><input id="set-invert" type="checkbox" /></label>
+            <label class="setting-row"><span>Camera shake</span><input id="set-shake" type="checkbox" /></label>
+            <label class="setting-row"><span>Motion blur</span><input id="set-motion" type="checkbox" /></label>
+            <label class="setting-row"><span>Text scale</span><input id="set-text" type="range" min="0.85" max="1.5" step="0.05" /><output id="out-text"></output></label>
+            <label class="setting-row"><span>Music volume</span><input id="set-music" type="range" min="0" max="1" step="0.05" /><output id="out-music"></output></label>
+            <label class="setting-row"><span>Effects volume</span><input id="set-effects" type="range" min="0" max="1" step="0.05" /><output id="out-effects"></output></label>
+            <label class="setting-row"><span>Lower graphical quality</span><input id="set-quality" type="checkbox" /></label>
+          </div>
+          <div class="panel-note">Tells use pose, shape and sound as well as color. Motion blur is disabled by default.</div>
+        </div>
+      </div>
+
+      <div id="dialogue-panel" class="screen modal-screen hidden">
+        <div class="panel dialogue-panel">
+          <div class="panel-kicker" id="dialogue-kicker">Alder Hollow</div>
+          <h2 id="dialogue-title"></h2>
+          <p id="dialogue-body"></p>
+          <div class="panel-actions"><button id="btn-dialogue-continue" class="menu-button">Continue</button></div>
+        </div>
+      </div>
+
+      <div id="rest-panel" class="screen modal-screen hidden">
+        <div class="panel">
+          <div class="panel-kicker">Rest and travel</div>
+          <h2 id="rest-title"></h2>
+          <p id="rest-body"></p>
+          <div class="panel-actions" id="rest-actions"></div>
+        </div>
+      </div>
+
+      <div id="project-panel" class="screen modal-screen hidden">
+        <div class="panel project-panel">
+          <div class="panel-kicker">Camp project</div>
+          <h2 id="project-title"></h2>
+          <p id="project-body"></p>
+          <div class="resource-line" id="project-resources"></div>
+          <div class="panel-actions" id="project-actions"></div>
+        </div>
+      </div>
+
+      <div id="confirm-panel" class="screen modal-screen hidden">
+        <div class="panel confirm-panel">
+          <div class="panel-kicker">Confirm</div>
+          <h2 id="confirm-title">Replace progress?</h2>
+          <p id="confirm-body"></p>
+          <div class="panel-actions">
+            <button id="btn-confirm-yes" class="menu-button danger">Yes, replace</button>
+            <button id="btn-confirm-no" class="menu-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="death-overlay" class="screen hidden">
+        <div class="death-content">
+          <div class="panel-kicker">The road is patient</div>
+          <h2>Fallen</h2>
+          <p id="death-text">Returning to the last rest point...</p>
+        </div>
+      </div>
+
+      <div id="ending-panel" class="screen hidden">
+        <div class="letterbox top"></div>
+        <div class="ending-content">
+          <div class="panel-kicker">Chapter complete</div>
+          <h1>Light the Road</h1>
+          <p id="ending-text"></p>
+          <button id="btn-ending-continue" class="menu-button">Continue exploring</button>
+        </div>
+        <div class="letterbox bottom"></div>
+      </div>
+
+      <div id="transition-overlay" class="hidden"><div id="transition-text"></div></div>
+    </div>
+  </body>
+</html>
